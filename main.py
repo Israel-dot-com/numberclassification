@@ -82,7 +82,7 @@ async def classify_number(number: str):
     if any(c.isalpha() for c in number):
         raise HTTPException(
             status_code=400,
-            detail={"number": "alphabet", "error": True}
+            detail={"number": number, "error": True}
         )
     
     try:
