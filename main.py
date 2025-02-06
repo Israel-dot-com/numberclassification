@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import math
 import requests
 from typing import List, Union
@@ -11,14 +12,14 @@ app = FastAPI(title="Number Classification API")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"], 
-    allow_headers=["*"],  
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class ErrorResponse(BaseModel):
-    number: Union[str, float]
+    number: str  # Changed to str to handle invalid input directly
     error: bool = True
 
 class NumberResponse(BaseModel):
@@ -67,7 +68,7 @@ def get_number_properties(n: Union[int, float]) -> List[str]:
 
 async def get_fun_fact(n: Union[int, float]) -> str:
     try:
-        response = requests.get(f"http://numbersapi.com/{(n)}/math", timeout=3)
+        response = requests.get(f"http://numbersapi.com/{n}/math", timeout=3)
         if response.status_code == 200:
             return response.text
     except:
@@ -84,7 +85,10 @@ async def classify_number(number: str):
     try:
         num = float(number)
     except ValueError:
-        raise HTTPException(status_code=400, detail={"number": number, "error": True})
+        return JSONResponse(
+            status_code=400,
+            content={"number": number, "error": True}
+        )
     
     properties = get_number_properties(num)
     fun_fact = await get_fun_fact(num)
