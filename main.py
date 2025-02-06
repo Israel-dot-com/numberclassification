@@ -48,7 +48,7 @@ def is_armstrong(n: Union[int, float]) -> bool:
     if not float(n).is_integer():
         return False
     n = int(n)
-    num_str = str(abs(n)) 
+    num_str = str(abs(n))
     power = len(num_str)
     try:
         return sum(int(digit) ** power for digit in num_str) == abs(n)
@@ -67,7 +67,7 @@ def get_number_properties(n: Union[int, float]) -> List[str]:
 
 async def get_fun_fact(n: Union[int, float]) -> str:
     try:
-        response = requests.get(f"http://numbersapi.com/{int(n)}/math", timeout=3)
+        response = requests.get(f"http://numbersapi.com/{(n)}/math", timeout=3)
         if response.status_code == 200:
             return response.text
     except:
@@ -83,11 +83,6 @@ async def get_fun_fact(n: Union[int, float]) -> str:
 async def classify_number(number: str):
     try:
         num = float(number)
-        if not float(num).is_integer():
-            raise ValueError
-        num = int(num)
-        if num > 10**7 or len(str(abs(num))) > 8:
-            raise ValueError
     except ValueError:
         raise HTTPException(status_code=400, detail={"number": number, "error": True})
     
