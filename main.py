@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import math
 import requests
-from typing import List
+from typing import List, Union
 import os
 from pydantic import BaseModel
 
@@ -18,93 +18,78 @@ app.add_middleware(
 )
 
 class ErrorResponse(BaseModel):
-    number: str
+    number: Union[str, float]
     error: bool = True
 
 class NumberResponse(BaseModel):
-    number: int
+    number: Union[int, float]
     is_prime: bool
     is_perfect: bool
     properties: List[str]
     digit_sum: int
     fun_fact: str
 
-def is_prime(n: int) -> bool:
-    if n < 2:
+def is_prime(n: Union[int, float]) -> bool:
+    if not float(n).is_integer() or n < 2:
         return False
+    n = int(n)
     for i in range(2, int(math.sqrt(n)) + 1):
         if n % i == 0:
             return False
     return True
 
-def is_perfect(n: int) -> bool:
-    if n < 1:
+def is_perfect(n: Union[int, float]) -> bool:
+    if not float(n).is_integer() or n < 1:
         return False
-    sum_factors = sum(i for i in range(1, n) if n % i == 0)
-    return sum_factors == n
+    n = int(n)
+    return sum(i for i in range(1, n) if n % i == 0) == n
 
-def is_armstrong(n: int) -> bool:
-    num_str = str(n)
+def is_armstrong(n: Union[int, float]) -> bool:
+    if not float(n).is_integer():
+        return False
+    n = int(n)
+    num_str = str(abs(n)) 
     power = len(num_str)
     try:
-        return sum(int(digit) ** power for digit in num_str) == n
+        return sum(int(digit) ** power for digit in num_str) == abs(n)
     except OverflowError:
         return False
 
-def get_digit_sum(n: int) -> int:
+def get_digit_sum(n: Union[int, float]) -> int:
+    return sum(int(digit) for digit in str(abs(int(n))))
 
-    return sum(int(digit) for digit in str(n))
-def get_number_properties(n: int) -> List[str]:
+def get_number_properties(n: Union[int, float]) -> List[str]:
     properties = []
     if is_armstrong(n):
         properties.append("armstrong")
-    properties.append("odd" if n % 2 else "even") 
+    properties.append("odd" if int(n) % 2 else "even")
     return properties
-async def get_fun_fact(n: int) -> str:
-    """Get a fun fact about the number from Numbers API."""
+
+async def get_fun_fact(n: Union[int, float]) -> str:
     try:
-        response = requests.get(f"http://numbersapi.com/{n}/math")
+        response = requests.get(f"http://numbersapi.com/{int(n)}/math", timeout=3)
         if response.status_code == 200:
             return response.text
-        else:
-            if is_armstrong(n):
-                digits = list(str(n))
-                power = len(digits)
-                calculation = " + ".join(f"{d}^{power}" for d in digits)
-                return f"{n} is an Armstrong number because {calculation} = {n}"
-            return f"The number {n} is interesting in mathematics!"
     except:
-        return f"The number {n} is interesting in mathematics!"
+        pass
+    if is_armstrong(n):
+        digits = list(str(abs(int(n))))
+        power = len(digits)
+        calculation = " + ".join(f"{d}^{power}" for d in digits)
+        return f"{n} is an Armstrong number because {calculation} = {n}"
+    return f"The number {n} is interesting in mathematics!"
 
 @app.get("/api/classify-number", response_model=NumberResponse, responses={400: {"model": ErrorResponse}})
 async def classify_number(number: str):
-    """Classify a number and return its properties."""
-    if any(c.isalpha() for c in number):
-        raise HTTPException(
-            status_code=400,
-            detail={"number": number, "error": True}
-        )
-    
     try:
-        if len(number) > 8:
-            raise HTTPException(
-                status_code=400,
-                detail={"number": number, "error": True}
-            )
-            
-        num = int(number)
-        
-        if num > 10**7:
-            raise HTTPException(
-                status_code=400,
-                detail={"number": number, "error": True}
-            )
-            
+        num = float(number)
+        if not float(num).is_integer():
+            raise ValueError
+        num = int(num)
+        if num > 10**7 or len(str(abs(num))) > 8:
+            raise ValueError
     except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail={"number": number, "error": True}
-        )
+        raise HTTPException(status_code=400, detail={"number": number, "error": True})
     
     properties = get_number_properties(num)
     fun_fact = await get_fun_fact(num)
